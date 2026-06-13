@@ -34,6 +34,106 @@ npm run dev          # web on :3000
 npm run dev:worker   # worker (separate terminal)
 ```
 
+> **Heads-up:** `npm run db:migrate`, `npm run dev:worker`, and `npm run worker`
+> run through `tsx`, which does **not** auto-load `.env` (only `npm run dev` /
+> Next.js does). When using a hand-managed `.env`, pass it explicitly:
+> `npx tsx --env-file=.env scripts/migrate.ts` and
+> `npx tsx --env-file=.env worker/index.ts`. See
+> [Onboarding](#onboarding-local-step-by-step) below.
+
+## Onboarding (local, step by step)
+
+A complete first-time setup against a **local system Postgres** (not the Docker
+`postgres` service). Skip steps you've already done.
+
+### 1. Install dependencies
+
+```bash
+npm install
+```
+
+### 2. Create the database
+
+Standup expects the role/database referenced by `DATABASE_URL`
+(`postgres://standup:standup@localhost:5432/standup` by default). With a local
+Postgres server already running, create them once:
+
+```bash
+sudo -u postgres psql -c "CREATE ROLE standup WITH LOGIN PASSWORD 'standup';"
+sudo -u postgres psql -c "CREATE DATABASE standup OWNER standup;"
+```
+
+Verify the connection string resolves:
+
+```bash
+psql "postgres://standup:standup@localhost:5432/standup" -c '\conninfo'
+```
+
+(Postgres 16+ is fine — the schema uses only standard types.)
+
+### 3. Configure `.env`
+
+```bash
+cp .env.example .env
+```
+
+Then fill it in:
+
+- **`AUTH_SECRET`** and **`SECRETS_ENCRYPTION_KEY`** — generate each with
+  `openssl rand -base64 32`. (`SECRETS_ENCRYPTION_KEY` must decode to exactly 32
+  bytes, which `rand -base64 32` produces.)
+- **`AUTH_GITHUB_ID`** / **`AUTH_GITHUB_SECRET`** — create a GitHub OAuth app at
+  <https://github.com/settings/developers> → **OAuth Apps** → **New OAuth App**:
+  - **Homepage URL**: `http://localhost:3000`
+  - **Authorization callback URL**:
+    `http://localhost:3000/api/auth/callback/github`
+
+  Copy the **Client ID** into `AUTH_GITHUB_ID`, generate a client secret and copy
+  it into `AUTH_GITHUB_SECRET`.
+- **`ALLOWED_GITHUB_LOGINS`** — comma-separated GitHub usernames allowed to sign
+  in (e.g. your own login).
+- `DATABASE_URL` / `AUTH_URL` — keep the defaults for local dev.
+- `GITHUB_PAT` / `CLAUDE_CODE_OAUTH_TOKEN` — leave commented out; configure them
+  in the dashboard Settings UI instead (stored encrypted).
+
+### 4. Apply migrations
+
+```bash
+npx tsx --env-file=.env scripts/migrate.ts
+```
+
+This creates the app tables (`repos`, `issues`, `plans`, `plan_versions`, `runs`,
+`run_items`, `executions`, `execution_logs`, `settings`, `users`, `allowlist`)
+plus the pg-boss schema. Confirm with
+`psql "$DATABASE_URL" -c '\dt'`.
+
+### 5. Start the web app and worker
+
+In two terminals:
+
+```bash
+npm run dev                              # web on http://localhost:3000
+npx tsx --env-file=.env worker/index.ts  # worker
+```
+
+### 6. First run in the dashboard
+
+1. Open <http://localhost:3000> and **Sign in with GitHub** (your login must be
+   in `ALLOWED_GITHUB_LOGINS`).
+2. Go to **Settings**:
+   - Paste a GitHub **fine-grained PAT** (Contents R/W, Issues R, PRs R/W) and
+     validate it.
+   - Paste your **Claude OAuth token** (from `claude setup-token`, needs Claude
+     Pro/Max).
+   - Add **watched repos** as `owner/name`.
+   - Optionally adjust the schedule (default `0 7 * * *` UTC), timezone, max
+     issues per run, and planner/executor models.
+3. Press **Run now** (or wait for the morning cron). The worker syncs open
+   issues and Claude drafts a plan per issue. Track progress under **Runs**.
+4. On the **dashboard**, open an issue to **edit / approve / reject** its plan.
+5. On an *approved* plan, click **Execute**. The worker clones the repo, runs the
+   executor agent, and opens a PR — watch live logs on the execution page.
+
 ## Environment variables
 
 | Variable | Required | Description |
