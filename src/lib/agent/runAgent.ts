@@ -226,6 +226,16 @@ export async function runAgent(opts: RunAgentOptions): Promise<RunAgentResult> {
     );
   }
 
+  // Claude Code rejects --dangerously-skip-permissions under root/sudo. Fail
+  // fast with an actionable message instead of an opaque "exited with code 1".
+  if (opts.permissionMode === "bypassPermissions" && process.getuid?.() === 0) {
+    throw new Error(
+      "Refusing to launch the executor agent as root: Claude Code rejects " +
+        "--dangerously-skip-permissions under root/sudo. Run the worker as a " +
+        "non-root user (the Docker image uses USER node).",
+    );
+  }
+
   const env = buildMinimalEnv();
   env.CLAUDE_CODE_OAUTH_TOKEN = token;
   // EXPLICITLY never set: ANTHROPIC_API_KEY, GITHUB_PAT, GITHUB_TOKEN, GH_TOKEN.

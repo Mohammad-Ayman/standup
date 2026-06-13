@@ -19,6 +19,14 @@ COPY . .
 
 RUN npm run build
 
+# Claude Code refuses --dangerously-skip-permissions under root, which the
+# executor needs (permissionMode: bypassPermissions). Run as the unprivileged
+# `node` user that the base image ships. Give it ownership of the app tree and
+# a writable HOME (npm/tsx/Next caches, Claude Code config).
+ENV HOME=/home/node
+RUN chown -R node:node /app
+USER node
+
 EXPOSE 3000
 
 CMD ["npm", "run", "start"]
