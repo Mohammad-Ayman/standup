@@ -12,6 +12,8 @@ import { StatusBadge } from "./status-badge";
 export type IssueListItem = {
   issueId: number;
   repo: string;
+  /** Repo is watched but disabled — excluded from automatic runs. */
+  repoDisabled: boolean;
   number: number | null;
   title: string | null;
   labels: string[];
@@ -57,6 +59,14 @@ export function PlanCard({ item }: { item: IssueListItem }) {
       </Link>
 
       <div className="flex shrink-0 items-center gap-2">
+        {item.repoDisabled ? (
+          <span
+            title="This repo is disabled — its issues are excluded from automatic runs. You can still plan this issue manually from its detail page."
+            className="inline-flex items-center rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-500 ring-1 ring-inset ring-zinc-400/20"
+          >
+            repo disabled
+          </span>
+        ) : null}
         {item.stale ? (
           <span
             title="The issue changed on GitHub after this plan was generated"

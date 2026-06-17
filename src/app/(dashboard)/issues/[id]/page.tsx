@@ -132,6 +132,17 @@ export default async function IssueDetailPage({
         </div>
       </header>
 
+      {/* Disabled-repo notice — the repo is still watched but excluded from
+          automatic runs; manual planning below still works. */}
+      {repo.enabled !== true ? (
+        <p className="rounded-xl border border-zinc-200 bg-zinc-50 px-6 py-4 text-sm text-zinc-600">
+          <span className="font-medium text-zinc-700">Repo disabled.</span>{" "}
+          {repo.owner}/{repo.name} is still watched but its issues are excluded
+          from automatic runs. You can still plan this issue manually below — it
+          won&apos;t change the repo&apos;s disabled state.
+        </p>
+      ) : null}
+
       {/* Issue body */}
       <section className="rounded-xl border border-zinc-200 bg-white px-6 py-5">
         <h2 className="mb-3 text-sm font-semibold text-zinc-900">Issue</h2>
