@@ -106,6 +106,7 @@ export default async function DashboardPage() {
     grouped[group].push({
       issueId: issue.id,
       repo: `${repo.owner}/${repo.name}`,
+      repoDisabled: repo.enabled !== true,
       number: issue.number,
       title: issue.title,
       labels: Array.isArray(issue.labels) ? (issue.labels as string[]) : [],
